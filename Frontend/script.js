@@ -1,7 +1,7 @@
 console.log("Frontend Script Loaded Successfully");
 
 // - - - - - - SOCKET SERVER CREATION - - - - - - //
-const socket = new WebSocket("ws://localhost:3000");
+const socket = new WebSocket("wss://connect-io-hb6l.onrender.com");
 let myUsername = "";
 
 
