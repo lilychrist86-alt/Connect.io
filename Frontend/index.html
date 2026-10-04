@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect - Chat In Room</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=groups" />
+
+<body>
+    <div class="upperconatimer">
+
+        <div class="mainTitle">
+
+            <span class="material-symbols-outlined">
+                groups
+            </span>
+
+            <h2>Connect.io</h2>
+
+        </div>
+
+        <div class="themeSection">
+
+            <div class="themetitle">
+                <h2>Themes</h2>
+            </div>
+
+            <div class="colorSection">
+                <button id="red"></button>
+                <button id="green"></button>
+                <button id="blue"></button>
+                <button id="pink"></button>
+                <button id="beige"></button>
+                <button id="teal"></button>
+                <button id="orange"></button>
+                <button id="yellow"></button>
+            </div>
+
+        </div>
+
+        <p>Designed and Developed by Shrijib Dey</p>
+    </div>
+
+
+    <div class="OpeningContainer">
+
+        <div class="info">
+            <h1>Welcome to Connect.io</h1>
+            <p>Connect with your friends in a private room. Create a room or join an existing one to start chatting!</p>
+        </div>
+
+        <div class="createRoom">
+            <h2>Create A Room</h2>
+
+
+            <div class="creationFields">
+                <input class="inputs" type="text" id="username" placeholder="Enter your Username" required>
+                <button class="buttons" id="createbtn">CREATE</button>
+            </div>
+        </div>
+
+        <div class="joinRoom">
+            <h2>Join A Room</h2>
+
+            <div class="joiningFields">
+                <input class="inputs" type="text" id="username2" placeholder="Enter your Username" required>
+                <input class="inputs" type="text" id="roomID" placeholder="Enter Room ID" required>
+                <button class="buttons" id="joinbtn">JOIN</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- CHAT ROOM-->
+
+
+    <div class="CHAT">
+        <div class="chatContainer">
+
+            <div class="chatHeader">
+                <h2>Host - <span id="currentRoomHost">shrijib</span></h2>
+
+                <p class="onlineStatus">
+                    <span class="onlineDot"></span>
+                    <span id="onlineCount">0</span> ONLINE
+                </p>
+
+
+                <h2>ROOM ID: <span id="roomIdDisplay"></span></h2>
+            </div>
+            <hr>
+            <div class="chatBody" id="chatMessages">
+
+                <div class="alertText">
+                    <p class="alertTitle">🔒 NOTE</p>
+
+                    <p class="alertMessage">
+                        Welcome to Connect.io. I, Shrijib, Founder of Connect, request you not to violate this room.
+                        Messages are not Encrypted. Messages may be accessible to the Server and Users in this room.
+                    </p>
+                </div>
+
+            </div>
+
+        </div>
+
+        <p id="typingIndicator"></p>
+
+        <div class="chatInput">
+            <input type="text" id="messageInput" class="chatMsgInput" placeholder="Type your message here...">
+            <button class="buttons" id="sendbtn">SEND</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
