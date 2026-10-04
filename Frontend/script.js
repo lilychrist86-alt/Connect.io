@@ -122,7 +122,7 @@ createBtn.addEventListener("click", async () => {
         return;
     }
 
-    const response = await fetch("http://localhost:3000/create-room", {
+    const response = await fetch("https://connect-io-hb6l.onrender.com/create-room", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -179,7 +179,7 @@ joinBtn.addEventListener("click", async () => {
         return;
     }
 
-    const response = await fetch("http://localhost:3000/join-room", {
+    const response = await fetch("https://connect-io-hb6l.onrender.com/join-room", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
