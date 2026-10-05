@@ -1,29 +1,30 @@
-
 const http = require("http");
-const { json } = require("stream/consumers");
 const WebSocket = require("ws");
 
+// =====================================================
+// ROOM ID GENERATION
+// =====================================================
 
-
-
-
-
-
-//ROOM ID GENERATION 
 function generateRoomID() {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-};
+    return Math.random()
+        .toString(36)
+        .substring(2, 8)
+        .toUpperCase();
+}
 
-
-
+// =====================================================
 // ROOMS
+// =====================================================
+
 const rooms = {};
 
-
-
-//CORS ERROR HANDLING:
+// =====================================================
+// HTTP SERVER
+// =====================================================
 
 const server = http.createServer((req, res) => {
+
+    // ---------------- CORS ----------------
 
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -35,155 +36,405 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // ---------------- TEST ROUTE ----------------
 
     if (req.url === "/message") {
         res.end("Connect.io Server received the message!");
         return;
     }
 
-
-    // ----------  Create ROUTE 
+    // =================================================
+    // CREATE ROOM
+    // =================================================
 
     if (req.method === "POST" && req.url === "/create-room") {
 
         let body = "";
 
-        req.on("data", chunk => {
+        req.on("data", (chunk) => {
             body += chunk;
         });
 
         req.on("end", () => {
 
             if (!body) {
+                res.writeHead(400, {
+                    "Content-Type": "application/json"
+                });
+
                 res.end(JSON.stringify({
                     success: false,
                     message: "Request body is empty"
                 }));
+
                 return;
             }
 
+            try {
 
+                const data = JSON.parse(body);
 
-            const data = JSON.parse(body);
+                if (!data.username || data.username.trim() === "") {
 
-            const randomRoomID = generateRoomID();
+                    res.writeHead(400, {
+                        "Content-Type": "application/json"
+                    });
 
-            rooms[randomRoomID] = {
-                users: []
-            };
+                    res.end(JSON.stringify({
+                        success: false,
+                        message: "Username is required"
+                    }));
 
-            rooms[randomRoomID].users.push(data.username);
+                    return;
+                }
 
-            const response = {
-                success: true,
-                roomID: randomRoomID,
-                users: rooms[randomRoomID].users
-            };
+                const username = data.username.trim();
 
-            console.log("Recived Room Host Details:", body);
+                const randomRoomID = generateRoomID();
 
+                rooms[randomRoomID] = {
+                    users: [username]
+                };
 
-            // RESPONSE has to SEND here ONLY
-            res.end(JSON.stringify(response));
+                const response = {
+                    success: true,
+                    roomID: randomRoomID,
+                    users: rooms[randomRoomID].users
+                };
 
+                console.log("Room Created:", randomRoomID);
+                console.log("Host:", username);
+
+                res.writeHead(200, {
+                    "Content-Type": "application/json"
+                });
+
+                res.end(JSON.stringify(response));
+
+            } catch (error) {
+
+                console.error("Create room error:", error);
+
+                res.writeHead(400, {
+                    "Content-Type": "application/json"
+                });
+
+                res.end(JSON.stringify({
+                    success: false,
+                    message: "Invalid request"
+                }));
+            }
         });
 
         return;
     }
 
-    // ----------  Join  ROUTE 
+    // =================================================
+    // JOIN ROOM
+    // =================================================
 
     if (req.method === "POST" && req.url === "/join-room") {
+
         let body = "";
 
-        req.on("data", chunk => {
+        req.on("data", (chunk) => {
             body += chunk;
         });
 
         req.on("end", () => {
-            const requestData = JSON.parse(body);
-            // console.log(requestData.roomID);
 
+            try {
 
+                const requestData = JSON.parse(body);
 
-            if (rooms[requestData.roomID]) {
+                const username = requestData.username?.trim();
+                const roomID = requestData.roomID?.trim().toUpperCase();
 
-                rooms[requestData.roomID].users.push(requestData.username);
+                if (!username || !roomID) {
 
-                const response = {
-                    success: true,
-                    roomId: requestData.roomID,
-                    username: requestData.username,
-                    users: rooms[requestData.roomID].users
+                    res.writeHead(400, {
+                        "Content-Type": "application/json"
+                    });
+
+                    res.end(JSON.stringify({
+                        success: false,
+                        message: "Username and room ID are required"
+                    }));
+
+                    return;
                 }
-                res.end(JSON.stringify(response));
 
-            } else {
-                const response = {
+                // Check if room exists
+
+                if (rooms[roomID]) {
+
+                    // Add user to room's HTTP user list
+                    rooms[roomID].users.push(username);
+
+                    const response = {
+                        success: true,
+                        roomId: roomID,
+                        username: username,
+                        users: rooms[roomID].users
+                    };
+
+                    console.log("User Joined Room:", username);
+                    console.log("Room:", roomID);
+
+                    res.writeHead(200, {
+                        "Content-Type": "application/json"
+                    });
+
+                    res.end(JSON.stringify(response));
+
+                } else {
+
+                    res.writeHead(404, {
+                        "Content-Type": "application/json"
+                    });
+
+                    res.end(JSON.stringify({
+                        success: false,
+                        message: "Room does not exist"
+                    }));
+                }
+
+            } catch (error) {
+
+                console.error("Join room error:", error);
+
+                res.writeHead(400, {
+                    "Content-Type": "application/json"
+                });
+
+                res.end(JSON.stringify({
                     success: false,
-                    message: "room dose not exist"
-                }
-                res.end(JSON.stringify(response));
-
+                    message: "Invalid request"
+                }));
             }
-
         });
 
         return;
     }
 
-    res.end("Connect.io Server is running!");
+    // =================================================
+    // DEFAULT RESPONSE
+    // =================================================
 
+    res.end("Connect.io Server is running!");
 });
 
-const wss = new WebSocket.Server({ server });
+// =====================================================
+// WEBSOCKET SERVER
+// =====================================================
 
-// Function to calculate and send online users count
+const wss = new WebSocket.Server({
+    server: server
+});
+
+// =====================================================
+// BROADCAST ONLINE COUNT
+// =====================================================
+
 function broadcastOnlineCount(roomID) {
 
     let onlineUsers = 0;
 
-    // Count users in this room
     wss.clients.forEach((client) => {
 
-        if (client.roomID === roomID) {
+        if (
+            client.readyState === WebSocket.OPEN &&
+            client.roomID === roomID
+        ) {
             onlineUsers++;
         }
-
     });
 
-    // Send count to everyone in this room
     wss.clients.forEach((client) => {
 
-        if (client.roomID === roomID) {
+        if (
+            client.readyState === WebSocket.OPEN &&
+            client.roomID === roomID
+        ) {
 
             client.send(JSON.stringify({
                 type: "online-count",
                 count: onlineUsers
             }));
-
         }
-
     });
 
-    console.log("Online users:", onlineUsers);
+    console.log(
+        `Online users in ${roomID}: ${onlineUsers}`
+    );
 }
 
+// =====================================================
+// SEND MESSAGE TO ROOM
+// =====================================================
+
+function broadcastToRoom(roomID, data) {
+
+    wss.clients.forEach((client) => {
+
+        if (
+            client.readyState === WebSocket.OPEN &&
+            client.roomID === roomID
+        ) {
+
+            client.send(JSON.stringify(data));
+        }
+    });
+}
+
+// =====================================================
+// WEBSOCKET CONNECTION
+// =====================================================
 
 wss.on("connection", (socket) => {
 
-    console.log("1 User Has Connected");
+    console.log("A user has connected to WebSocket");
 
+    socket.username = null;
+    socket.roomID = null;
+
+    // =================================================
+    // MESSAGE RECEIVED
+    // =================================================
 
     socket.on("message", (message) => {
 
-         const data = JSON.parse(message.toString());
+        let data;
+
+        // ---------------- Parse JSON ----------------
+
+        try {
+
+            data = JSON.parse(message.toString());
+
+        } catch (error) {
+
+            console.error(
+                "Invalid WebSocket message:",
+                message.toString()
+            );
+
+            return;
+        }
+
+        // =================================================
+        // JOIN ROOM
+        // =================================================
+
+        if (data.type === "join-room") {
+
+            const username = data.username?.trim();
+            const roomID = data.roomID?.trim().toUpperCase();
+
+            if (!username || !roomID) {
+
+                console.log(
+                    "Invalid join-room request"
+                );
+
+                return;
+            }
+
+            // Check that HTTP room exists
+
+            if (!rooms[roomID]) {
+
+                socket.send(JSON.stringify({
+                    type: "error",
+                    message: "Room does not exist"
+                }));
+
+                return;
+            }
+
+            // If socket was already inside another room,
+            // remove it from that room first.
+
+            if (
+                socket.roomID &&
+                socket.roomID !== roomID
+            ) {
+
+                const oldRoomID = socket.roomID;
+
+                socket.roomID = null;
+                socket.username = null;
+
+                broadcastOnlineCount(oldRoomID);
+            }
+
+            socket.username = username;
+            socket.roomID = roomID;
+
+            console.log(
+                `WebSocket Join -> ${username} joined ${roomID}`
+            );
+
+            // Send current online count
+
+            broadcastOnlineCount(roomID);
+
+            return;
+        }
+
+        // =================================================
+        // CHAT MESSAGE
+        // =================================================
+
+        if (data.type === "chat-message") {
+
+            // User must be inside a room
+
+            if (!socket.roomID) {
+
+                console.log(
+                    "Chat message rejected: user is not in a room"
+                );
+
+                return;
+            }
+
+            const messageText =
+                typeof data.message === "string"
+                    ? data.message.trim()
+                    : "";
+
+            if (!messageText) {
+                return;
+            }
+
+            broadcastToRoom(socket.roomID, {
+                type: "chat-message",
+                username: socket.username,
+                message: messageText
+            });
+
+            console.log(
+                `Chat [${socket.roomID}] ${socket.username}: ${messageText}`
+            );
+
+            return;
+        }
+
+        // =================================================
+        // TYPING INDICATOR
+        // =================================================
 
         if (data.type === "typing") {
+
+            if (!socket.roomID) {
+                return;
+            }
 
             wss.clients.forEach((client) => {
 
                 if (
+                    client.readyState === WebSocket.OPEN &&
                     client.roomID === socket.roomID &&
                     client !== socket
                 ) {
@@ -191,101 +442,77 @@ wss.on("connection", (socket) => {
                     client.send(JSON.stringify({
                         type: "typing",
                         username: socket.username,
-                        isTyping: data.isTyping
+                        isTyping: Boolean(data.isTyping)
                     }));
-
                 }
-
             });
 
+            return;
         }
-
-
-
-
-       
-
-        // console.log(data);
-
-
-        // USER JOINS ROOM
-        if (data.type === "join-room") {
-
-            socket.username = data.username;
-            socket.roomID = data.roomID;
-
-            console.log("Username: ", socket.username);
-            console.log("RoomID: ", socket.roomID);
-
-            // Update online count
-            broadcastOnlineCount(socket.roomID);
-        }
-
-
-        // CHAT MESSAGE
-        if (data.type === "chat-message") {
-
-            wss.clients.forEach((client) => {
-
-                if (client.roomID === socket.roomID) {
-
-                    client.send(JSON.stringify({
-                        type: "chat-message",
-                        username: socket.username,
-                        message: data.message
-                    }));
-
-                }
-
-            });
-
-            console.log("Chat:", data.message);
-        }
-
     });
 
+    // =================================================
+    // USER DISCONNECTS
+    // =================================================
 
-    // USER LEAVES
     socket.on("close", () => {
 
         const roomID = socket.roomID;
+        const username = socket.username;
 
-        // If user never joined a room
         if (!roomID) {
+            console.log("A user disconnected before joining a room");
             return;
         }
 
+        console.log(
+            `User disconnected: ${username} from ${roomID}`
+        );
 
-        // Tell other users that someone left
+        // Tell other users
+
         wss.clients.forEach((client) => {
 
             if (
+                client.readyState === WebSocket.OPEN &&
                 client.roomID === roomID &&
                 client !== socket
             ) {
 
                 client.send(JSON.stringify({
                     type: "user-left",
-                    username: socket.username
+                    username: username
                 }));
-
             }
-
         });
 
+        // Update count
 
-        // Update online count
         broadcastOnlineCount(roomID);
-
     });
 
+    // =================================================
+    // WEBSOCKET ERROR
+    // =================================================
+
+    socket.on("error", (error) => {
+
+        console.error(
+            "WebSocket error:",
+            error.message
+        );
+    });
 });
 
-
-// * * SERVER PORT * *
+// =====================================================
+// SERVER PORT
+// =====================================================
 
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server is running on port ${PORT}`);
+
+    console.log(
+        `Connect.io Server is running on port ${PORT}`
+    );
 });
